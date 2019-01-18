@@ -25,7 +25,7 @@ volatile int time_count = 0;
  * so it use kernel stack of current running process
  */
 void my_timer_handler(void)
-{
+{//内核定时调度
 #if 1
     if(time_count%1000 == 0 && my_need_sched != 1)
     {
@@ -48,7 +48,7 @@ void my_schedule(void)
     	return;
     }
     printk(KERN_NOTICE ">>>my_schedule<<<\n");
-    /* schedule */
+    /* schedule *///切换到下一个任务
     next = my_current_task->next;
     prev = my_current_task;
     if(next->state == 0)/* -1 unrunnable, 0 runnable, >0 stopped */
@@ -57,14 +57,14 @@ void my_schedule(void)
     	printk(KERN_NOTICE ">>>switch %d to %d<<<\n",prev->pid,next->pid);  
     	/* switch to next process */
     	asm volatile(	
-        	"pushl %%ebp\n\t" 	    /* save ebp */
-        	"movl %%esp,%0\n\t" 	/* save esp */
-        	"movl %2,%%esp\n\t"     /* restore  esp */
-        	"movl $1f,%1\n\t"       /* save eip */	
-        	"pushl %3\n\t" 
+        	"pushl %%ebp\n\t" 	    /* save ebp */ // 把ebp 压入栈  esp +1 
+        	"movl %%esp,%0\n\t" 	/* save esp */ // 把esp 存放到上一任务的 thread.sp 内存中
+        	"movl %2,%%esp\n\t"     /* restore  esp *///把esp指向到下一任务的sp中,第一次 &task[i].stack[KERNEL_STACK_SIZE-1] 之后为上次设置
+        	"movl $1f,%1\n\t"       /* save eip *///设置下一次执行的位置为下面的1:位置
+        	"pushl %3\n\t" //把下一任务的ip压入栈,返回后会pop栈,并执行 (第一次 my_process 之后为 1:这个位置)
         	"ret\n\t" 	            /* restore  eip */
-        	"1:\t"                  /* next process start here */
-        	"popl %%ebp\n\t"
+        	"1:\t"                  /* next process start here *///大于1次后执行的位置
+        	"popl %%ebp\n\t"//弹出到ebp 等于原因原来的ebp 和 esp 指向,等于从新回到保存的进程中
         	: "=m" (prev->thread.sp),"=m" (prev->thread.ip)
         	: "m" (next->thread.sp),"m" (next->thread.ip)
     	); 
