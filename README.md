@@ -1,3 +1,5 @@
+在代码中添加中文注释.
+===
 # Welcome to the mykernel!
 
 It is a platform to write your own OS kernel,its based on Linux Kernel 3.9.4 source code.
